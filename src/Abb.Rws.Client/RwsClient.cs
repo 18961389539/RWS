@@ -643,7 +643,9 @@ public sealed partial class RwsClient : IDisposable
         long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : null;
 
     private static bool IsTrue(string? text) =>
-        string.Equals(text, "true", StringComparison.OrdinalIgnoreCase) || text == "1";
+        string.Equals(text, "true", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(text, "on", StringComparison.OrdinalIgnoreCase) ||
+        text == "1";
 
     private static string Escape(string value) => Uri.EscapeDataString(value);
 

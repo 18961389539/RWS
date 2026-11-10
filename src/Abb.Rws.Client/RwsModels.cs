@@ -129,7 +129,24 @@ public sealed record MechUnitSummary(string Name, string Mode, string DriveModul
 /// <summary>机械单元详细信息。</summary>
 public sealed record MechUnitInfo(string Name, string Type, string Mode, string ToolName, string WorkObjectName,
     string PayloadName, int AxisCount, string? TaskName, string? JogMode, string? Status,
-    string? TotalPayloadName = null, string? CoordSystem = null);
+    string? TotalPayloadName = null, string? CoordSystem = null, int AxisCountTotal = 0,
+    bool IsIntegratedUnit = false, bool HasIntegratedUnit = false);
+
+/// <summary>运动系统摘要。</summary>
+public sealed record MotionSystemSummary(long ChangeCount, string MechUnitName, int PollRate,
+    bool AbsoluteAccuracyActive, bool ModalPayloadMode);
+
+/// <summary>运动监控（Jog Supervision）状态。</summary>
+public sealed record MotionSupervisionInfo(bool Enabled, int Level);
+
+/// <summary>路径监控状态。</summary>
+public sealed record PathSupervisionInfo(string Mode, int Level);
+
+/// <summary>机械单元单轴姿态。</summary>
+public sealed record MechUnitAxisPose(double[] TransMm, double[] RotQuaternion);
+
+/// <summary>机械单元的碰撞预测模型。</summary>
+public sealed record CollisionPredictionModel(string ModelName, bool Initialized);
 
 /// <summary>机械单元单轴状态。</summary>
 public sealed record MechUnitAxisInfo(int Axis, string? Status, string? LogicalAxis,

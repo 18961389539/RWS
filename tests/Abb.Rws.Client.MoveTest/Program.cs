@@ -460,7 +460,53 @@ async Task TestMotionSystemAsync()
     await Try("task ext joint state", () => client.GetTaskExternalJointStateAsync());
     await Try("motion error state", () => client.GetMotionErrorStateAsync());
     await Try("collision prediction", () => client.GetCollisionPredictionAsync());
+    await Try("collision prediction model", () => client.GetCollisionPredictionModelAsync("ROB_1"));
     await Try("energy state", () => client.GetEnergyStateAsync());
+    await Try("motion system summary", () => client.GetMotionSystemSummaryAsync());
+    await Try("motion change count", async () =>
+    {
+        var summary = await client.GetMotionSystemSummaryAsync();
+        var valid = await client.IsMotionChangeCountValidAsync(summary.ChangeCount);
+        return $"change-count={summary.ChangeCount} valid={valid}";
+    });
+    await Try("non-motion execution", () => client.GetNonMotionExecutionModeAsync());
+    await Try("motion supervision", () => client.GetMotionSupervisionAsync("ROB_1"));
+    await Try("path supervision", () => client.GetPathSupervisionAsync("ROB_1"));
+    await Try("axis 1 pose", () => client.GetMechUnitAxisPoseAsync("ROB_1", 1));
+
+    // 安全写测试：Lead-through 保持 Inactive
+    await Try("set lead-through to current", async () =>
+    {
+        var status = await client.GetMechUnitLeadThroughAsync("ROB_1");
+        await client.RequestMastershipAsync(MastershipDomain.Edit);
+        await client.RequestMastershipAsync(MastershipDomain.Motion);
+        try
+        {
+            await client.SetMechUnitLeadThroughAsync("ROB_1", status, false, "0,0,0,0,0,0,0");
+            return await client.GetMechUnitLeadThroughAsync("ROB_1");
+        }
+        finally
+        {
+            await client.ReleaseMastershipAsync(MastershipDomain.Motion);
+            await client.ReleaseMastershipAsync(MastershipDomain.Edit);
+        }
+    });
+
+    // 安全写测试：非运动执行模式保持原值
+    await Try("set non-motion execution to current", async () =>
+    {
+        var mode = await client.GetNonMotionExecutionModeAsync();
+        await client.RequestMastershipAsync(MastershipDomain.Edit);
+        try
+        {
+            await client.SetNonMotionExecutionModeAsync(mode);
+            return mode;
+        }
+        finally
+        {
+            await client.ReleaseMastershipAsync(MastershipDomain.Edit);
+        }
+    });
 
     // 安全写测试：把当前工具/工件坐标设置成原值
     await Try("set tool/wobj to current", async () =>
