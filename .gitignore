@@ -1,0 +1,6 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+tests/Abb.Rws.Client.MoveTest/state.json
