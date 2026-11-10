@@ -84,6 +84,26 @@ public sealed record RwsProductVersion(string Name, string Version, string Versi
 /// <summary>RWS 返回码说明。</summary>
 public sealed record RwsReturnCode(string Name, long Code, string Severity, string Description);
 
+/// <summary>RAPID Alias IO 条目。</summary>
+public sealed record RwsAliasIo(string Name, IReadOnlyDictionary<string, string> Values);
+
+/// <summary>控制器身份信息。</summary>
+public sealed record ControllerIdentity(string Name, string Id, string Type, string MacAddress);
+
+/// <summary>安全模式状态。</summary>
+public sealed record SafetyModeInfo(int UserData, string Mode);
+
+/// <summary>安全制动器检查状态。</summary>
+public sealed record SafetyBrakeCheckInfo(string NextBrakeCheckTime, string LastBrakeCheckStatus,
+    string Status);
+
+/// <summary>安全配置状态。</summary>
+public sealed record SafetyConfigurationInfo(string Status, string SoftwareVersion, string FileVersion,
+    string CreationDate, string CreatedBy, string ConfigName, string Checksum);
+
+/// <summary>安全违规信息。</summary>
+public sealed record SafetyViolationInfo(IReadOnlyDictionary<string, string> Values);
+
 /// <summary>控制器设备树节点。</summary>
 public sealed record RwsDeviceInfo(string Id, string Name, string Path,
     IReadOnlyList<RwsDeviceInfo> Children, IReadOnlyList<RwsDeviceProperty> Properties);

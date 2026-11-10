@@ -51,16 +51,30 @@ public sealed partial class RwsClient
         return await GetConfigDictionaryAsync(resource, ct).ConfigureAwait(false);
     }
 
-    /// <summary>按条件搜索 IO 信号；name 为前缀匹配。</summary>
+    /// <summary>按条件搜索 IO 信号；name 为前缀匹配，支持两组条件。</summary>
     public async Task<IReadOnlyList<AbbSignal>> SearchSignalsAsync(string? name = null, string? device = null,
-        string? network = null, string? category = null, string? type = null, CancellationToken ct = default)
+        string? network = null, string? category = null, string? type = null, string? categoryPon = null,
+        bool? invert = null, bool? blocked = null, string? name2 = null, string? device2 = null,
+        string? network2 = null, string? category2 = null, string? categoryPon2 = null, string? type2 = null,
+        bool? invert2 = null, bool? blocked2 = null, CancellationToken ct = default)
     {
         var form = new Dictionary<string, string>();
         AddIfNotEmpty(form, "name", name);
         AddIfNotEmpty(form, "device", device);
         AddIfNotEmpty(form, "network", network);
         AddIfNotEmpty(form, "category", category);
+        AddIfNotEmpty(form, "category-pon", categoryPon);
         AddIfNotEmpty(form, "type", type);
+        AddBool(form, "invert", invert);
+        AddBool(form, "blocked", blocked);
+        AddIfNotEmpty(form, "name2", name2);
+        AddIfNotEmpty(form, "device2", device2);
+        AddIfNotEmpty(form, "network2", network2);
+        AddIfNotEmpty(form, "category2", category2);
+        AddIfNotEmpty(form, "category-pon2", categoryPon2);
+        AddIfNotEmpty(form, "type2", type2);
+        AddBool(form, "invert2", invert2);
+        AddBool(form, "blocked2", blocked2);
 
         var resource = Version == RwsProtocolVersion.Rws2
             ? "rw/iosystem/signals/signal-search"
@@ -162,6 +176,14 @@ public sealed partial class RwsClient
         if (!string.IsNullOrEmpty(value))
         {
             form[key] = value;
+        }
+    }
+
+    private static void AddBool(IDictionary<string, string> form, string key, bool? value)
+    {
+        if (value is not null)
+        {
+            form[key] = value.Value ? "true" : "false";
         }
     }
 }

@@ -395,4 +395,13 @@ public sealed partial class RwsClient
             await DeactivateTaskAsync(task, ct).ConfigureAwait(false);
         }
     }
+
+    /// <summary>列出 RAPID Alias IO。</summary>
+    public async Task<IReadOnlyList<RwsAliasIo>> GetRapidAliasIoAsync(CancellationToken ct = default)
+    {
+        var result = await _protocol.GetAsync("rw/rapid/aliasio", ct).ConfigureAwait(false);
+        return result.Items.Select(item => new RwsAliasIo(
+            item.Title ?? item.Value("name") ?? string.Empty,
+            new Dictionary<string, string>(item.Values, StringComparer.OrdinalIgnoreCase))).ToList();
+    }
 }

@@ -105,9 +105,13 @@ else if (mode.Equals("backup", StringComparison.OrdinalIgnoreCase))
 {
     await TestBackupAsync();
 }
+else if (mode.Equals("ctrl", StringComparison.OrdinalIgnoreCase))
+{
+    await TestControllerAsync();
+}
 else
 {
-    Console.WriteLine("用法: <host> circle|cleanup|status|motor|rapid|motion|io|filesys|panel|subs|protocol|devices|dipc|backup");
+    Console.WriteLine("用法: <host> circle|cleanup|status|motor|rapid|motion|io|filesys|panel|subs|protocol|devices|dipc|backup|ctrl");
 }
 
 async Task PrepareCircleAsync()
@@ -386,6 +390,7 @@ async Task<bool> WaitForStateAsync(string expected, int timeoutSeconds)
 
 async Task TestRapidAdvancedAsync()
 {
+    await Try("alias io", async () => (await client.GetRapidAliasIoAsync()).Count);
     await Try("breakpoints", async () => (await client.GetBreakpointsAsync()).Count);
     await Try("activation record", () => client.GetActivationRecordAsync());
     await Try("motion pointer", () => client.GetMotionPointerAsync());
@@ -451,6 +456,7 @@ async Task TestMotionSystemAsync()
         (await client.GetMechUnitAxesAsync("ROB_1")).Select(a => $"{a.Axis}:{a.Status}")));
     await Try("pjoints", async () => string.Join(", ", await client.GetMechUnitPJointsAsync("ROB_1")));
     await Try("base frame", () => client.GetMechUnitBaseFrameAsync("ROB_1"));
+    await Try("cartesian", () => client.GetMechUnitCartesianAsync("ROB_1"));
     await Try("lead-through", () => client.GetMechUnitLeadThroughAsync("ROB_1"));
     await Try("smb data fields", async () => (await client.GetMechUnitSmbDataAsync("ROB_1")).Count);
     await Try("motor calibration", async () =>
@@ -590,6 +596,8 @@ async Task TestIoAdvancedAsync()
         var access = first is null ? null : (await client.GetSignalByNameAsync(first.Name)).WriteAccess;
         return $"{groups.Count}，样本 access={access}";
     });
+    await Try("search signals advanced", async () =>
+        (await client.SearchSignalsAsync(type: "DO", blocked: false, invert: false)).Count);
     await Try("search devices enabled", async () =>
         (await client.SearchIoDevicesAsync(logicalState: "enabled")).Count);
 
@@ -984,6 +992,39 @@ async Task TestDipcQueuesAsync()
 async Task TestBackupAsync()
 {
     await Try("backup/restore state", () => client.GetBackupStateAsync());
+}
+
+async Task TestControllerAsync()
+{
+    await Try("controller identity", () => client.GetControllerIdentityAsync());
+    await Try("set controller name to current", async () =>
+    {
+        var identity = await client.GetControllerIdentityAsync();
+        await client.SetControllerNameAsync(identity.Name);
+        return identity.Name;
+    });
+    await Try("certificate stores", async () =>
+        string.Join(", ", await client.GetCertificateStoresAsync()));
+    await Try("trust CA certificates", async () =>
+        (await client.GetCertificatesAsync("controller/trust_ca_store")).Count);
+    await Try("safety mode", () => client.GetSafetyModeAsync());
+    await Try("safety brake check", () => client.GetSafetyBrakeCheckAsync());
+    await Try("safety load", () => client.GetSafetyLoadStatusAsync());
+    await Try("safety configuration", () => client.GetSafetyConfigurationAsync());
+    await Try("safety violation", async () =>
+    {
+        var violation = await client.GetSafetyViolationAsync();
+        return $"violation={violation.Values.GetValueOrDefault("violation-num")} " +
+               $"type={violation.Values.GetValueOrDefault("violation-type")}";
+    });
+    await Try("registry entries", async () =>
+        string.Join(", ", await client.GetRegistryEntriesAsync()));
+    await Try("registry rw-services", async () =>
+        (await client.GetRegistryContentAsync("rw-services")).Length);
+    await Try("controller options", async () =>
+        (await client.GetControllerOptionsAsync()).Count);
+    await Try("controller features", async () =>
+        (await client.GetControllerFeaturesAsync()).Count);
 }
 
 async Task PrintStatusAsync()

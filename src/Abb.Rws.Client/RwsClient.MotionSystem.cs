@@ -126,6 +126,20 @@ public sealed partial class RwsClient
             Numbers(item, "q1", "q2", "q3", "q4"));
     }
 
+    /// <summary>读取机械单元当前笛卡尔位姿（与 /robtarget 等价）。</summary>
+    public async Task<RobTarget> GetMechUnitCartesianAsync(string mechUnit = "ROB_1",
+        CancellationToken ct = default)
+    {
+        var item = (await _protocol
+            .GetAsync($"rw/motionsystem/mechunits/{Escape(mechUnit)}/cartesian", ct)
+            .ConfigureAwait(false)).First();
+        return new RobTarget(
+            Numbers(item, "x", "y", "z"),
+            Numbers(item, "q1", "q2", "q3", "q4"),
+            Numbers(item, "cf1", "cf4", "cf6", "cfx"),
+            []);
+    }
+
     /// <summary>读取机械单元物理关节值。</summary>
     public async Task<double[]> GetMechUnitPJointsAsync(string mechUnit, CancellationToken ct = default)
     {
