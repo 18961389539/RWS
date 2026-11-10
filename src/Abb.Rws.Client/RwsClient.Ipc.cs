@@ -13,6 +13,28 @@ public sealed partial class RwsClient
             ParseLong(item.Value("max-pkg-size")));
     }
 
+    /// <summary>列出控制器上的 DIPC 队列名称。</summary>
+    public async Task<IReadOnlyList<string>> GetIpcQueuesAsync(CancellationToken ct = default)
+    {
+        var result = await _protocol.GetAsync("rw/dipc", ct).ConfigureAwait(false);
+        return result.Items
+            .Where(item => item.Type == "dipc-queue-li")
+            .Select(item => item.Title ?? string.Empty)
+            .Where(name => name.Length > 0)
+            .ToList();
+    }
+
+    /// <summary>删除 DIPC 队列。</summary>
+    public Task DeleteIpcQueueAsync(string queueName, CancellationToken ct = default)
+    {
+        if (Version == RwsProtocolVersion.Rws2)
+        {
+            return _protocol.DeleteAsync($"rw/dipc/{Escape(queueName)}", ct);
+        }
+
+        return _protocol.PostAsync($"rw/dipc/{Escape(queueName)}?action=dipc-delete", null, ct);
+    }
+
     /// <summary>创建 DIPC 队列。</summary>
     public Task CreateIpcQueueAsync(string queueName, int queueSize = 100, int maxMessageSize = 100,
         CancellationToken ct = default)

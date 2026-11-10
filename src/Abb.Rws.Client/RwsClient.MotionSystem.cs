@@ -24,11 +24,13 @@ public sealed partial class RwsClient
             item.Value("mode") ?? string.Empty,
             item.Value("tool-name") ?? string.Empty,
             item.Value("wobj-name") ?? string.Empty,
-            item.Value("total-payload-name") ?? item.Value("payload-name") ?? string.Empty,
+            item.Value("payload-name") ?? item.Value("total-payload-name") ?? string.Empty,
             ParseInt(item.Value("axes")),
             item.Value("task-name"),
             item.Value("jog-mode"),
-            item.Value("status"));
+            item.Value("status"),
+            item.Value("total-payload-name"),
+            item.Value("coord-system"));
     }
 
     /// <summary>读取机械单元各轴状态。</summary>
@@ -166,6 +168,16 @@ public sealed partial class RwsClient
             null);
     }
 
+    /// <summary>启用/停用碰撞预测（Collision Prediction）。</summary>
+    public Task SetCollisionPredictionModeAsync(bool enabled, CancellationToken ct = default)
+    {
+        var form = new Dictionary<string, string> { ["mode"] = enabled ? "true" : "false" };
+        var resource = Version == RwsProtocolVersion.Rws2
+            ? "rw/motionsystem/collisionprediction"
+            : "rw/motionsystem/motionsupervision?action=set-colpred-mode";
+        return _protocol.PostAsync(resource, form, ct);
+    }
+
     /// <summary>读取系统能耗状态。</summary>
     public async Task<SystemEnergyState> GetEnergyStateAsync(CancellationToken ct = default)
     {
@@ -180,19 +192,42 @@ public sealed partial class RwsClient
     }
 
     /// <summary>设置机械单元当前工具。需要 Edit/Motion 控制权。</summary>
-    public Task SetMechUnitToolAsync(string mechUnit, string tool, CancellationToken ct = default)
-    {
-        var form = new Dictionary<string, string> { ["tool"] = tool };
-        var resource = Version == RwsProtocolVersion.Rws2
-            ? $"rw/motionsystem/mechunits/{Escape(mechUnit)}"
-            : $"rw/motionsystem/mechunits/{Escape(mechUnit)}?action=set";
-        return _protocol.PostAsync(resource, form, ct);
-    }
+    public Task SetMechUnitToolAsync(string mechUnit, string tool, CancellationToken ct = default) =>
+        SetMechUnitAttributeAsync(mechUnit, new Dictionary<string, string> { ["tool"] = tool }, ct);
 
     /// <summary>设置机械单元当前工件坐标。需要 Edit/Motion 控制权。</summary>
-    public Task SetMechUnitWorkObjectAsync(string mechUnit, string wobj, CancellationToken ct = default)
+    public Task SetMechUnitWorkObjectAsync(string mechUnit, string wobj, CancellationToken ct = default) =>
+        SetMechUnitAttributeAsync(mechUnit, new Dictionary<string, string> { ["wobj"] = wobj }, ct);
+
+    /// <summary>设置机械单元负载。totalPayload 为空时只写 payload。</summary>
+    public Task SetMechUnitPayloadAsync(string mechUnit, string payload, string? totalPayload = null,
+        CancellationToken ct = default)
     {
-        var form = new Dictionary<string, string> { ["wobj"] = wobj };
+        var form = new Dictionary<string, string> { ["payload"] = payload };
+        if (!string.IsNullOrEmpty(totalPayload))
+        {
+            form["total-payload"] = totalPayload;
+        }
+
+        return SetMechUnitAttributeAsync(mechUnit, form, ct);
+    }
+
+    /// <summary>设置机械单元模式，如 Activated。</summary>
+    public Task SetMechUnitModeAsync(string mechUnit, string mode, CancellationToken ct = default) =>
+        SetMechUnitAttributeAsync(mechUnit, new Dictionary<string, string> { ["mode"] = mode }, ct);
+
+    /// <summary>设置机械单元 Jog 模式，如 Cartesian / Joint。</summary>
+    public Task SetMechUnitJogModeAsync(string mechUnit, string jogMode, CancellationToken ct = default) =>
+        SetMechUnitAttributeAsync(mechUnit, new Dictionary<string, string> { ["jog-mode"] = jogMode }, ct);
+
+    /// <summary>设置机械单元坐标系，如 World / Base / Tool / Wobj。</summary>
+    public Task SetMechUnitCoordSystemAsync(string mechUnit, string coordSystem,
+        CancellationToken ct = default) =>
+        SetMechUnitAttributeAsync(mechUnit, new Dictionary<string, string> { ["coord-system"] = coordSystem }, ct);
+
+    private Task SetMechUnitAttributeAsync(string mechUnit, IReadOnlyDictionary<string, string> form,
+        CancellationToken ct)
+    {
         var resource = Version == RwsProtocolVersion.Rws2
             ? $"rw/motionsystem/mechunits/{Escape(mechUnit)}"
             : $"rw/motionsystem/mechunits/{Escape(mechUnit)}?action=set";

@@ -93,9 +93,21 @@ else if (mode.Equals("protocol", StringComparison.OrdinalIgnoreCase))
 {
     await TestProtocolAsync();
 }
+else if (mode.Equals("devices", StringComparison.OrdinalIgnoreCase))
+{
+    await TestDevicesAsync();
+}
+else if (mode.Equals("dipc", StringComparison.OrdinalIgnoreCase))
+{
+    await TestDipcQueuesAsync();
+}
+else if (mode.Equals("backup", StringComparison.OrdinalIgnoreCase))
+{
+    await TestBackupAsync();
+}
 else
 {
-    Console.WriteLine("用法: <host> circle|cleanup|status|motor|rapid|motion|io|filesys|panel|subs|protocol");
+    Console.WriteLine("用法: <host> circle|cleanup|status|motor|rapid|motion|io|filesys|panel|subs|protocol|devices|dipc|backup");
 }
 
 async Task PrepareCircleAsync()
@@ -468,6 +480,46 @@ async Task TestMotionSystemAsync()
             await client.ReleaseMastershipAsync(MastershipDomain.Edit);
         }
     });
+
+    // 安全写测试：把负载/模式/Jog 模式/坐标系设置成原值
+    await Try("set motion attributes to current", async () =>
+    {
+        var before = await client.GetMechUnitAsync("ROB_1");
+        await client.RequestMastershipAsync(MastershipDomain.Edit);
+        await client.RequestMastershipAsync(MastershipDomain.Motion);
+        try
+        {
+            await client.SetMechUnitPayloadAsync("ROB_1", before.PayloadName, before.TotalPayloadName);
+            await client.SetMechUnitModeAsync("ROB_1", before.Mode);
+            if (!string.IsNullOrEmpty(before.JogMode))
+            {
+                await client.SetMechUnitJogModeAsync("ROB_1", before.JogMode);
+            }
+
+            if (!string.IsNullOrEmpty(before.CoordSystem))
+            {
+                await client.SetMechUnitCoordSystemAsync("ROB_1", before.CoordSystem);
+            }
+
+            var after = await client.GetMechUnitAsync("ROB_1");
+            return $"payload={after.PayloadName}/{after.TotalPayloadName} mode={after.Mode} " +
+                   $"jog={after.JogMode} coord={after.CoordSystem}";
+        }
+        finally
+        {
+            await client.ReleaseMastershipAsync(MastershipDomain.Motion);
+            await client.ReleaseMastershipAsync(MastershipDomain.Edit);
+        }
+    });
+
+    // 安全写测试：碰撞预测保持原状态
+    await Try("set collision prediction to current", async () =>
+    {
+        var before = await client.GetCollisionPredictionAsync();
+        await client.SetCollisionPredictionModeAsync(before.Enabled);
+        var after = await client.GetCollisionPredictionAsync();
+        return $"enabled {before.Enabled} -> {after.Enabled}";
+    });
 }
 
 async Task TestIoAdvancedAsync()
@@ -809,6 +861,83 @@ async Task TestProtocolAsync()
         await client.GetEventLogAsync(0, 1, 1, "fifo", "en");
         return $"lifo={lifo} fifo={client.ApiVersion}";
     });
+}
+
+async Task TestDevicesAsync()
+{
+    await Try("device groups", async () =>
+    {
+        var groups = await client.GetDeviceGroupsAsync();
+        return string.Join(", ", groups.Children.Select(child => $"{child.Id}({child.Name})"));
+    });
+    await Try("hardware devices", async () =>
+    {
+        var hw = await client.GetDeviceAsync("HW_DEVICES");
+        return string.Join(", ", hw.Children.Select(child => child.Name));
+    });
+    await Try("ROB1 children", async () =>
+    {
+        var rob = await client.GetDeviceAsync("HW_DEVICES/ROB1");
+        return $"{rob.Children.Count} 项: " + string.Join(", ", rob.Children.Select(child => child.Name));
+    });
+    await Try("main computer module info", async () =>
+    {
+        var device = await client.GetDeviceAsync("HW_DEVICES/MAIN_COMPUTER/MAIN_COMPUTER_MODULE_INFO");
+        return string.Join("; ", device.Properties.Select(property => $"{property.Name}={property.Value}"));
+    });
+    await Try("CPU temperature", async () =>
+    {
+        var property = await client.GetDevicePropertyAsync(
+            "HW_DEVICES/MAIN_COMPUTER/MAIN_COMPUTER_CPU", "PROPERTY_MC_MODULE_TEMPERATURE");
+        return property is null ? "<null>" : $"{property.Name}={property.Value}{property.Unit}";
+    });
+    await Try("RobAPI subscriptions", async () =>
+    {
+        var device = await client.GetDeviceAsync("SW_RESOURCES/ROBAPI/ROBAPI_SUB_TOTAL");
+        return string.Join("; ", device.Properties.Select(property => $"{property.Name}={property.Value}"));
+    });
+}
+
+async Task TestDipcQueuesAsync()
+{
+    await Try("dipc info", () => client.GetIpcInfoAsync());
+    await Try("dipc queues", async () => string.Join(", ", await client.GetIpcQueuesAsync()));
+
+    var queue = "dotnet_q_" + DateTime.Now.ToString("HHmmss");
+    try
+    {
+        await client.CreateIpcQueueAsync(queue, 10, 100);
+        var afterCreate = await client.GetIpcQueuesAsync();
+        Console.WriteLine(afterCreate.Contains(queue)
+            ? $"PASS create queue {queue}"
+            : $"FAIL create queue {queue}");
+
+        await client.DeleteIpcQueueAsync(queue);
+        var afterDelete = await client.GetIpcQueuesAsync();
+        Console.WriteLine(afterDelete.Contains(queue)
+            ? $"FAIL delete queue {queue}"
+            : $"PASS delete queue {queue}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"FAIL dipc queue test: {ex.GetType().Name}: {ex.Message}");
+        try
+        {
+            if ((await client.GetIpcQueuesAsync()).Contains(queue))
+            {
+                await client.DeleteIpcQueueAsync(queue);
+            }
+        }
+        catch
+        {
+            // 清理失败时忽略
+        }
+    }
+}
+
+async Task TestBackupAsync()
+{
+    await Try("backup/restore state", () => client.GetBackupStateAsync());
 }
 
 async Task PrintStatusAsync()

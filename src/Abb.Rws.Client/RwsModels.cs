@@ -84,6 +84,13 @@ public sealed record RwsProductVersion(string Name, string Version, string Versi
 /// <summary>RWS 返回码说明。</summary>
 public sealed record RwsReturnCode(string Name, long Code, string Severity, string Description);
 
+/// <summary>控制器设备树节点。</summary>
+public sealed record RwsDeviceInfo(string Id, string Name, string Path,
+    IReadOnlyList<RwsDeviceInfo> Children, IReadOnlyList<RwsDeviceProperty> Properties);
+
+/// <summary>控制器设备属性。</summary>
+public sealed record RwsDeviceProperty(string Id, string Name, string Value, string? Unit);
+
 /// <summary>资源支持的 HTTP 方法及原始 OPTIONS 响应。</summary>
 public sealed record RwsResourceOptions(IReadOnlyList<string> Allow, string? RawBody);
 
@@ -121,7 +128,8 @@ public sealed record MechUnitSummary(string Name, string Mode, string DriveModul
 
 /// <summary>机械单元详细信息。</summary>
 public sealed record MechUnitInfo(string Name, string Type, string Mode, string ToolName, string WorkObjectName,
-    string PayloadName, int AxisCount, string? TaskName, string? JogMode, string? Status);
+    string PayloadName, int AxisCount, string? TaskName, string? JogMode, string? Status,
+    string? TotalPayloadName = null, string? CoordSystem = null);
 
 /// <summary>机械单元单轴状态。</summary>
 public sealed record MechUnitAxisInfo(int Axis, string? Status, string? LogicalAxis,

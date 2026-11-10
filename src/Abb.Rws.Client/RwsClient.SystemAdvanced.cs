@@ -43,6 +43,13 @@ public sealed partial class RwsClient
                 item.Value("gateway"))).ToList();
     }
 
+    /// <summary>读取备份/恢复状态，如 Backup Ready、Backup in progress。</summary>
+    public async Task<string> GetBackupStateAsync(CancellationToken ct = default)
+    {
+        var item = (await _protocol.GetAsync("ctrl/backup/state", ct).ConfigureAwait(false)).First();
+        return item.Value("backup-state") ?? item.Title ?? string.Empty;
+    }
+
     /// <summary>创建控制器备份（异步）。返回进度 Location。</summary>
     public async Task<string?> CreateBackupAsync(string backupPath, bool archive = true,
         CancellationToken ct = default)
