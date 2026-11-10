@@ -22,6 +22,42 @@ public sealed partial class RwsClient
         return _protocol.PutFormAsync("ctrl/identity", form, ct);
     }
 
+    // ── 控制器系统与软件更新 ──────────────────────────────────────────────
+
+    /// <summary>读取控制器系统资源摘要。</summary>
+    public async Task<ControllerSystemInfo> GetControllerSystemInfoAsync(CancellationToken ct = default)
+    {
+        var result = await _protocol.GetAsync("ctrl/system", ct).ConfigureAwait(false);
+        var systemId = result.Items.FirstOrDefault(item => item.Type == "ctrl-system-li")?.Title
+                       ?? string.Empty;
+        var resources = result.Items
+            .Where(item => item.Type != "ctrl-system-li" && !string.IsNullOrEmpty(item.Title))
+            .Select(item => item.Title!)
+            .ToList();
+        return new ControllerSystemInfo(systemId, resources);
+    }
+
+    /// <summary>安装控制器系统软件更新。高风险，path 为文件服务路径。</summary>
+    public Task UpdateControllerSystemAsync(string path, CancellationToken ct = default)
+    {
+        var form = new Dictionary<string, string> { ["path"] = path };
+        return _protocol.PostAsync("ctrl/system/update", form, ct);
+    }
+
+    /// <summary>操作软件更新收件箱，operation 可为 open / close / clear。</summary>
+    public Task SetSoftwareUpdateInboxAsync(string operation, CancellationToken ct = default)
+    {
+        var form = new Dictionary<string, string> { ["operation"] = operation };
+        return _protocol.PostAsync("ctrl/system/softwareupdateinbox", form, ct);
+    }
+
+    /// <summary>读取控制器诊断资源原始内容；没有诊断数据时控制器会报错。</summary>
+    public async Task<string> GetDiagnosticsAsync(CancellationToken ct = default)
+    {
+        var result = await _protocol.GetAsync("ctrl/diagnostics", ct).ConfigureAwait(false);
+        return result.RawBody ?? string.Empty;
+    }
+
     // ── 证书存储 ──────────────────────────────────────────────────────────
 
     /// <summary>列出证书存储区（controller / system）。</summary>
@@ -101,6 +137,39 @@ public sealed partial class RwsClient
         var item = (await _protocol.GetAsync("ctrl/safety/violation", ct).ConfigureAwait(false)).First();
         return new SafetyViolationInfo(
             new Dictionary<string, string>(item.Values, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>复位安全控制器。极高风险。</summary>
+    public Task ResetSafetyControllerAsync(CancellationToken ct = default) =>
+        _protocol.PostAsync("ctrl/safety/reset", null, ct);
+
+    /// <summary>验证安全配置。极高风险。</summary>
+    public Task ValidateSafetyConfigurationAsync(string validatedBy, CancellationToken ct = default)
+    {
+        var form = new Dictionary<string, string> { ["validated-by"] = validatedBy };
+        return _protocol.PostAsync("ctrl/safety/validate", form, ct);
+    }
+
+    /// <summary>取消安全配置验证。极高风险。</summary>
+    public Task InvalidateSafetyConfigurationAsync(CancellationToken ct = default) =>
+        _protocol.PostAsync("ctrl/safety/invalidate", null, ct);
+
+    /// <summary>锁定安全控制器。极高风险。</summary>
+    public Task LockSafetyControllerAsync(string lockedBy, CancellationToken ct = default)
+    {
+        var form = new Dictionary<string, string> { ["locked-by"] = lockedBy };
+        return _protocol.PostAsync("ctrl/safety/lock", form, ct);
+    }
+
+    /// <summary>解锁安全控制器。极高风险。</summary>
+    public Task UnlockSafetyControllerAsync(CancellationToken ct = default) =>
+        _protocol.PostAsync("ctrl/safety/unlock", null, ct);
+
+    /// <summary>确认安全控制器同步。极高风险。</summary>
+    public Task AcknowledgeSafetySyncAsync(int index, CancellationToken ct = default)
+    {
+        var form = new Dictionary<string, string> { ["index"] = index.ToString() };
+        return _protocol.PostAsync("ctrl/safety/syncack", form, ct);
     }
 
     // ── 控制器注册表 / 选项 / 特性 ────────────────────────────────────────

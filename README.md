@@ -217,10 +217,10 @@ Console.WriteLine($"备份状态：{await client.GetBackupStateAsync()}");
 | 连接与协议 | `ConnectAsync`、`Version`、`ApiVersion`、`GetRwsServicesAsync`、`GetSystemProductsAsync`、`GetReturnCodesAsync`、`GetResourceOptionsAsync` |
 | 系统与面板 | 控制器状态、操作模式、速度倍率、电机上下电、模式锁、碰撞检测、使能请求、时钟/时区/时间服务器/网络、备份/恢复/重启 |
 | 事件日志 | 域列表、分页读取、按序号读取、LIFO、清空、原始日志保存 |
-| RAPID | 任务、模块、源码、符号、变量、程序指针、例行程序执行、启停、断点、调用栈、UI 指令、服务例行程序、ModPos、Hold-to-run、Alias IO |
+| RAPID | 任务、模块、源码、符号、变量、程序指针、例行程序执行、启停、断点、调用栈、UI 指令、服务例行程序、ModPos、Hold-to-run、Alias IO、指令推荐类型、指令面板分类、Task Spy |
 | 运动系统 | 机械单元、轴、轴姿态、pjoints、基座标、笛卡尔位姿、SMB、电机校准、Lead-through 读写、工具/工件/负载/模式/Jog/坐标系写入、运动监控、路径监控、变更计数、非运动执行、碰撞预测与模型、SingleUserLin 校准、能耗 |
 | IO | 网络、设备、信号、两组条件高级搜索、配置、仿真、阻塞解除、DO/AO/GO 写入、设备输入输出数据 |
-| 控制器诊断 | 控制器身份读取/改名、证书存储、安全状态（模式/制动检查/负载/配置/违规）、注册表、控制器选项/特性、文件压缩 |
+| 控制器诊断 | 控制器身份读取/改名、系统资源、软件更新、诊断读取、证书存储、安全状态读写、注册表、控制器选项/特性、文件压缩、会话登出 |
 | CFG | 域、类型、实例读取，实例创建/修改/删除，域保存，文件加载/校验 |
 | 文件 | 卷、目录、上传/下载、元数据、创建目录、复制、重命名、删除 |
 | DIPC | 限制信息、队列列表、创建/删除队列、发送/读取消息 |
@@ -246,6 +246,7 @@ dotnet run --project tests/Abb.Rws.Client.MoveTest -- 192.168.4.10 io
 dotnet run --project tests/Abb.Rws.Client.MoveTest -- 192.168.4.10 panel
 dotnet run --project tests/Abb.Rws.Client.MoveTest -- 192.168.4.10 subs
 dotnet run --project tests/Abb.Rws.Client.MoveTest -- 192.168.4.10 protocol
+dotnet run --project tests/Abb.Rws.Client.MoveTest -- 192.168.4.10 ctrl
 ```
 
 其他模式：`rapid`、`filesys`、`motor`、`circle`、`cleanup`、`uas`。
@@ -263,7 +264,9 @@ dotnet run --project tests/Abb.Rws.Client.MoveTest -- 192.168.4.10 protocol
 - 轴姿态写入、SingleUserLin 校准属于高风险操作，未在真机执行验证。
 - 当前 RobotWare 7.21 上，运动监控和路径监控只有读接口；写入返回 405。
 - `ctrl/diagnostics` 在当前控制器上还没有已保存的诊断数据；`ctrl/virtualtime` 仅虚拟控制器支持。
-- 安全控制器只提供只读状态查询；重置、加锁/解锁等安全写入未封装。
+- 安全控制器的写入已封装，但属于极高风险操作，未在真机执行。
+- 系统软件更新接口已封装，但未执行。
+- 指令推荐类型和指令面板条目需要 RAPID 程序处于停止状态才能读取。
 - Alias IO 在当前控制器上列表为空。
 - GO/AO 远程写入、远程 Start 取决于控制器信号属性和 UAS 授权，不是库本身可以绕过。
 - 面板语言只支持写入，控制器不提供读回接口。

@@ -396,6 +396,58 @@ public sealed partial class RwsClient
         }
     }
 
+    /// <summary>读取指令参数的推荐数据类型。</summary>
+    public async Task<IReadOnlyList<RapidPreferredDataType>> GetRapidPreferredDataTypesAsync(
+        string instruction, string parameter, string task = "T_ROB1", CancellationToken ct = default)
+    {
+        var query = $"?instruction={Escape(instruction)}&parameter={Escape(parameter)}";
+        var result = await _protocol.GetAsync($"rw/rapid/tasks/{Escape(task)}/pref-data-types{query}", ct)
+            .ConfigureAwait(false);
+        return result.Items
+            .Select(item => new RapidPreferredDataType(
+                item.Value("name-prefdattype") ?? item.Title ?? string.Empty,
+                item.Value("type-prefdattype") ?? string.Empty))
+            .Where(item => item.Name.Length > 0 || item.DataType.Length > 0)
+            .ToList();
+    }
+
+    /// <summary>读取 RAPID 指令面板分类。</summary>
+    public async Task<IReadOnlyList<RapidPalletHead>> GetRapidPalletHeadsAsync(
+        string task = "T_ROB1", int? start = null, int? limit = null, CancellationToken ct = default)
+    {
+        var result = await _protocol
+            .GetAsync($"rw/rapid/tasks/{Escape(task)}/pallet-head{BuildPagination(start, limit)}", ct)
+            .ConfigureAwait(false);
+        return result.Items
+            .Where(item => item.Type == "rap-pallet-head")
+            .Select(item => new RapidPalletHead(
+                ParseLong(item.Value("Number")),
+                item.Value("Name") ?? item.Title ?? string.Empty))
+            .ToList();
+    }
+
+    /// <summary>读取某个 RAPID 指令面板分类下的条目。</summary>
+    public async Task<IReadOnlyList<RapidPalletItem>> GetRapidPalletAsync(string task, long palletNumber,
+        int? start = null, int? limit = null, CancellationToken ct = default)
+    {
+        var result = await _protocol
+            .GetAsync($"rw/rapid/tasks/{Escape(task)}/pallet/{palletNumber}{BuildPagination(start, limit)}", ct)
+            .ConfigureAwait(false);
+        return result.Items
+            .Where(item => item.Title is not null || item.Value("Name") is not null)
+            .Select(item => new RapidPalletItem(
+                item.Value("Name") ?? item.Title ?? string.Empty,
+                new Dictionary<string, string>(item.Values, StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    /// <summary>读取 RAPID Task Spy 状态。</summary>
+    public async Task<string> GetRapidTaskSpyStatusAsync(CancellationToken ct = default)
+    {
+        var item = (await _protocol.GetAsync("rw/rapid/tasks/spy", ct).ConfigureAwait(false)).First();
+        return item.Value("status") ?? string.Empty;
+    }
+
     /// <summary>列出 RAPID Alias IO。</summary>
     public async Task<IReadOnlyList<RwsAliasIo>> GetRapidAliasIoAsync(CancellationToken ct = default)
     {
@@ -403,5 +455,21 @@ public sealed partial class RwsClient
         return result.Items.Select(item => new RwsAliasIo(
             item.Title ?? item.Value("name") ?? string.Empty,
             new Dictionary<string, string>(item.Values, StringComparer.OrdinalIgnoreCase))).ToList();
+    }
+
+    private static string BuildPagination(int? start, int? limit)
+    {
+        var parts = new List<string>();
+        if (start is not null)
+        {
+            parts.Add($"start={start.Value}");
+        }
+
+        if (limit is not null)
+        {
+            parts.Add($"limit={limit.Value}");
+        }
+
+        return parts.Count == 0 ? string.Empty : "?" + string.Join('&', parts);
     }
 }

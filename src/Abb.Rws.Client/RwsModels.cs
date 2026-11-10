@@ -87,6 +87,18 @@ public sealed record RwsReturnCode(string Name, long Code, string Severity, stri
 /// <summary>RAPID Alias IO 条目。</summary>
 public sealed record RwsAliasIo(string Name, IReadOnlyDictionary<string, string> Values);
 
+/// <summary>RAPID 指令参数的推荐数据类型。</summary>
+public sealed record RapidPreferredDataType(string Name, string DataType);
+
+/// <summary>RAPID 指令面板分类。</summary>
+public sealed record RapidPalletHead(long Number, string Name);
+
+/// <summary>RAPID 指令面板条目。</summary>
+public sealed record RapidPalletItem(string Name, IReadOnlyDictionary<string, string> Values);
+
+/// <summary>控制器系统资源摘要。</summary>
+public sealed record ControllerSystemInfo(string SystemId, IReadOnlyList<string> Resources);
+
 /// <summary>控制器身份信息。</summary>
 public sealed record ControllerIdentity(string Name, string Id, string Type, string MacAddress);
 

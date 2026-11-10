@@ -391,6 +391,12 @@ async Task<bool> WaitForStateAsync(string expected, int timeoutSeconds)
 async Task TestRapidAdvancedAsync()
 {
     await Try("alias io", async () => (await client.GetRapidAliasIoAsync()).Count);
+    await Try("preferred data types", async () =>
+        (await client.GetRapidPreferredDataTypesAsync("AliasIO", "FromSignal")).Count);
+    await Try("pallet heads", async () => string.Join(", ",
+        (await client.GetRapidPalletHeadsAsync(limit: 3)).Select(head => $"{head.Number}:{head.Name}")));
+    await Try("pallet 1", async () => (await client.GetRapidPalletAsync("T_ROB1", 1)).Count);
+    await Try("task spy", () => client.GetRapidTaskSpyStatusAsync());
     await Try("breakpoints", async () => (await client.GetBreakpointsAsync()).Count);
     await Try("activation record", () => client.GetActivationRecordAsync());
     await Try("motion pointer", () => client.GetMotionPointerAsync());
@@ -1025,6 +1031,13 @@ async Task TestControllerAsync()
         (await client.GetControllerOptionsAsync()).Count);
     await Try("controller features", async () =>
         (await client.GetControllerFeaturesAsync()).Count);
+    await Try("controller system", () => client.GetControllerSystemInfoAsync());
+    await Try("diagnostics", async () => (await client.GetDiagnosticsAsync()).Length);
+    await Try("logout", async () =>
+    {
+        await client.LogoutAsync();
+        return "ok";
+    });
 }
 
 async Task PrintStatusAsync()

@@ -45,6 +45,18 @@ public sealed partial class RwsClient
         return _protocol.PostAsync(resource, null, ct);
     }
 
+    /// <summary>登出当前 RWS 会话。</summary>
+    public async Task LogoutAsync(CancellationToken ct = default)
+    {
+        if (Version == RwsProtocolVersion.Rws2)
+        {
+            await _protocol.GetAsync("logout", ct).ConfigureAwait(false);
+            return;
+        }
+
+        await _protocol.GetBytesAsync("logout", "*/*", ct).ConfigureAwait(false);
+    }
+
     /// <summary>读取当前会话登录信息。</summary>
     public async Task<RwsLoginInfo> GetLoginInfoAsync(CancellationToken ct = default)
     {
